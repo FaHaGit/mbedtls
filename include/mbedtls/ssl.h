@@ -293,6 +293,15 @@
 #define MBEDTLS_SSL_CERT_TYPE_ECDSA_SIGN    64
 
 /*
+ * CA Root Indication Types
+ * RFC 6066 section 6
+ */
+#define MBEDTLS_SSL_CA_ID_TYPE_PRE_AGREED 0
+#define MBEDTLS_SSL_CA_ID_TYPE_KEY_SHA1_HASH 1
+#define MBEDTLS_SSL_CA_ID_TYPE_X509_NAME 2
+#define MBEDTLS_SSL_CA_ID_TYPE_CERT_SHA1_HASH 3
+
+/*
  * Message, alert and handshake types
  */
 #define MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC     20
@@ -353,6 +362,8 @@
 #define MBEDTLS_TLS_EXT_SERVERNAME_HOSTNAME          0
 
 #define MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH          1
+
+#define MBEDTLS_TLS_EXT_TRUSTED_CA_KEY				 3
 
 #define MBEDTLS_TLS_EXT_TRUNCATED_HMAC               4
 
