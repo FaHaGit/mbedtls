@@ -300,6 +300,9 @@ struct mbedtls_ssl_handshake_params
     mbedtls_x509_crt *sni_ca_chain;     /*!< trusted CAs from SNI callback  */
     mbedtls_x509_crl *sni_ca_crl;       /*!< trusted CAs CRLs from SNI      */
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
+#if defined(MBEDTLS_TLS_EXT_TRUSTED_CA_KEY)
+	mbedtls_ssl_key_cert *trusted_ca_key_cert;  /*!< trusted CAs from trusted_ca_key extension  */
+#endif /* MBEDTLS_TLS_EXT_TRUSTED_CA_KEY */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 #if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
     int ecrs_enabled;                   /*!< Handshake supports EC restart? */

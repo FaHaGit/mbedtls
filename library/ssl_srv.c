@@ -80,6 +80,87 @@ void mbedtls_ssl_conf_dtls_cookies( mbedtls_ssl_config *conf,
 }
 #endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY */
 
+#if defined(MBEDTLS_SSL_TRUSTED_CA_KEY)
+static int ssl_parse_trusted_ca_key_ext( mbedtls_ssl_context *ssl,
+                                         const unsigned char *buf,
+                                         size_t len )
+{
+    size_t trusted_authority_list_size, trusted_authority_size;
+    uint8_t identifier_type;
+    const unsigned char *p;
+    unsigned char own_crt_sha1_hash[20];
+    const mbedtls_x509_crt * trusted_ca_cert;
+    mbedtls_ssl_key_cert * own_key_cert;
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "parse trusted_ca_key extension" ) );
+
+    if( len < 2 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad client hello message" ) );
+        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+        return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO );
+    }
+    trusted_authority_list_size = len;
+
+    p = buf;
+    ssl->handshake->trusted_ca_key_cert = NULL;
+
+    while( trusted_authority_list_size >  0 )
+    {
+        trusted_authority_size = ( ( *p << 8 ) | *( p + 1 ) );
+        MBEDTLS_SSL_DEBUG_RET( 1, "trusted_authority_size", trusted_authority_size );
+        identifier_type = *( p + 2 );
+        p += 3;
+        trusted_ca_cert = ssl->conf->ca_chain;
+        own_key_cert = ssl->conf->key_cert;
+
+        /* Check of the identifier type */
+        if ( ( identifier_type != MBEDTLS_SSL_CA_ID_TYPE_CERT_SHA1_HASH) ||
+             ( ( trusted_authority_size - 1 ) != sizeof( own_crt_sha1_hash ) ) )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1,
+                                   ( "supporting only sha1-hash of TrustedCAKey identifier" ) );
+        }
+        else {
+            /* Check if the trusted-ca-key id is supported */
+            while (trusted_ca_cert != NULL)
+            {
+                mbedtls_sha1(trusted_ca_cert->raw.p,
+                             trusted_ca_cert->raw.len, own_crt_sha1_hash); // Get SHA1Hash
+
+                if ( 0 == memcmp( own_crt_sha1_hash, p,  trusted_authority_size - 1 ) )
+                {
+                    MBEDTLS_SSL_DEBUG_MSG( 3, ( "trusted-ca-key id found" ));
+                    ssl->handshake->trusted_ca_key_cert = own_key_cert;
+                    break;
+                }
+                trusted_ca_cert = trusted_ca_cert->next;
+                own_key_cert = own_key_cert->next;
+            }
+        }
+
+        if (ssl->handshake->trusted_ca_key_cert != NULL)
+        {
+            break;
+        }
+        else
+        {
+            p+= ( trusted_authority_size - 1 );
+            trusted_authority_list_size -= ( trusted_authority_size + 2 );
+        }
+    }
+
+    if (ssl->handshake->trusted_ca_key_cert == NULL)
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no appropriate certificate chain found "
+                                     "in the trusted-ca-key list" ));
+    }
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_TRUSTED_CA_KEY */
+
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static int ssl_parse_servername_ext( mbedtls_ssl_context *ssl,
                                      const unsigned char *buf,
@@ -708,6 +789,11 @@ static int ssl_pick_cert( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     if( ssl->handshake->sni_key_cert != NULL )
         list = ssl->handshake->sni_key_cert;
+    else
+#endif
+#if defined(MBEDTLS_SSL_TRUSTED_CA_KEY)
+    if( ssl->handshake->trusted_ca_key_cert != NULL )
+        list = ssl->handshake->trusted_ca_key_cert;
     else
 #endif
         list = ssl->conf->key_cert;
@@ -1695,6 +1781,16 @@ read_record_header:
             }
             switch( ext_id )
             {
+#if defined(MBEDTLS_SSL_TRUSTED_CA_KEY)
+            case MBEDTLS_TLS_EXT_TRUSTED_CA_KEY:
+                MBEDTLS_SSL_DEBUG_MSG( 3, ( "found trusted_ca_key extension" ) );
+
+                ret = ssl_parse_trusted_ca_key_ext( ssl, ext + 4, ext_size );
+                if( ret != 0 )
+                    return( ret );
+                break;
+#endif /* MBEDTLS_SSL_TRUSTED_CA_KEY */
+
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
             case MBEDTLS_TLS_EXT_SERVERNAME:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "found ServerName extension" ) );
