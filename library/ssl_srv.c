@@ -109,29 +109,28 @@ static int ssl_parse_trusted_ca_key_ext( mbedtls_ssl_context *ssl,
     while( trusted_authority_list_size >  0 )
     {
         trusted_authority_size = ( ( *p << 8 ) | *( p + 1 ) );
-        MBEDTLS_SSL_DEBUG_RET( 1, "trusted_authority_size", trusted_authority_size );
         identifier_type = *( p + 2 );
         p += 3;
         trusted_ca_cert = ssl->conf->ca_chain;
         own_key_cert = ssl->conf->key_cert;
 
         /* Check of the identifier type */
-        if ( ( identifier_type != MBEDTLS_SSL_CA_ID_TYPE_CERT_SHA1_HASH) ||
+        if( ( identifier_type != MBEDTLS_SSL_CA_ID_TYPE_CERT_SHA1_HASH ) ||
              ( ( trusted_authority_size - 1 ) != sizeof( own_crt_sha1_hash ) ) )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1,
-                                   ( "supporting only sha1-hash of TrustedCAKey identifier" ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "server supports only sha1-hash "
+                                        "of trustedCAKey identifier" ) );
         }
         else {
             /* Check if the trusted-ca-key id is supported */
-            while (trusted_ca_cert != NULL)
+            while( trusted_ca_cert != NULL )
             {
-                mbedtls_sha1(trusted_ca_cert->raw.p,
-                             trusted_ca_cert->raw.len, own_crt_sha1_hash); // Get SHA1Hash
+                mbedtls_sha1( trusted_ca_cert->raw.p, trusted_ca_cert->raw.len,
+                             own_crt_sha1_hash ); // Get SHA1Hash
 
-                if ( 0 == memcmp( own_crt_sha1_hash, p,  trusted_authority_size - 1 ) )
+                if( 0 == memcmp( own_crt_sha1_hash, p,  trusted_authority_size - 1 ) )
                 {
-                    MBEDTLS_SSL_DEBUG_MSG( 3, ( "trusted-ca-key id found" ));
+                    MBEDTLS_SSL_DEBUG_MSG( 3, ( "trusted-ca-key id found" ) );
                     ssl->handshake->trusted_ca_key_cert = own_key_cert;
                     break;
                 }
@@ -140,7 +139,7 @@ static int ssl_parse_trusted_ca_key_ext( mbedtls_ssl_context *ssl,
             }
         }
 
-        if (ssl->handshake->trusted_ca_key_cert != NULL)
+        if( ssl->handshake->trusted_ca_key_cert != NULL )
         {
             break;
         }
@@ -151,10 +150,10 @@ static int ssl_parse_trusted_ca_key_ext( mbedtls_ssl_context *ssl,
         }
     }
 
-    if (ssl->handshake->trusted_ca_key_cert == NULL)
+    if( ssl->handshake->trusted_ca_key_cert == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "no appropriate certificate chain found "
-                                     "in the trusted-ca-key list" ));
+                                    "in the trusted-ca-key list" ) );
     }
 
     return( 0 );
